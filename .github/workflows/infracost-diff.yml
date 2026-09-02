@@ -75,7 +75,7 @@ jobs:
           terraform init -backend=false
           terraform plan -refresh=false -out=tfplan.binary
           terraform show -json tfplan.binary > tfplan.json
-          infracost breakdown --path tfplan.json --out-file ../infracost-base.json
+          infracost breakdown --path tfplan.json --format json --out-file ../infracost-base.json
 
       - name: Generate Infracost JSON for Head
         if: github.event.action != 'closed'
@@ -84,7 +84,7 @@ jobs:
           terraform init -backend=false
           terraform plan -refresh=false -out=tfplan.binary
           terraform show -json tfplan.binary > tfplan.json
-          infracost breakdown --path tfplan.json --out-file ../infracost-head.json
+          infracost breakdown --path tfplan.json --format json --out-file ../infracost-head.json
 
       - name: Post Infracost Comment
         if: github.event.action != 'closed'
