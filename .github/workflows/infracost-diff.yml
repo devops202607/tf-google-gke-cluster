@@ -17,6 +17,13 @@ permissions:
 jobs:
   infracost-diff:
     runs-on: ubuntu-latest
+    
+    # Визначаємо змінні для всіх кроків у межах цієї джоби
+    env:
+      GOOGLE_OAUTH_ACCESS_TOKEN: "fake-token-for-infracost-scan"
+      CLOUDSDK_AUTH_ACCESS_TOKEN: "fake-token-for-infracost-scan"
+      GOOGLE_PROJECT: "fake-project-id"
+
     steps:
       - name: Get PR details
         id: pr
@@ -49,10 +56,41 @@ jobs:
           ref: ${{ steps.pr.outputs.head-ref }}
           path: head
 
+      - name: Setup Terraform
+        if: github.event.action != 'closed'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Setup Infracost
+        if: github.event.action != 'closed'
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Generate Infracost JSON for Base
+        if: github.event.action != 'closed'
+        run: |
+          cd base
+          terraform init -backend=false
+          terraform plan -refresh=false -out=tfplan.binary
+          terraform show -json tfplan.binary > tfplan.json
+          infracost breakdown --path tfplan.json --out-file ../infracost-base.json
+
+      - name: Generate Infracost JSON for Head
+        if: github.event.action != 'closed'
+        run: |
+          cd head
+          terraform init -backend=false
+          terraform plan -refresh=false -out=tfplan.binary
+          terraform show -json tfplan.binary > tfplan.json
+          infracost breakdown --path tfplan.json --out-file ../infracost-head.json
+
       - name: Run Infracost Diff
         uses: infracost/actions/diff@c2e668fda0716ccc96353c6e6438c4a20448821a
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
-          base-path: ${{ github.event.action != 'closed' && 'base' || '' }}
-          head-path: ${{ github.event.action != 'closed' && 'head' || '' }}
+          base-path: ${{ github.event.action != 'closed' && 'infracost-base.json' || '' }}
+          head-path: ${{ github.event.action != 'closed' && 'infracost-head.json' || '' }}
           pr-number: ${{ steps.pr.outputs.pr-number }}
+
