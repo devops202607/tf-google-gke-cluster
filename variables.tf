@@ -1,5 +1,6 @@
 variable "GOOGLE_PROJECT" {
   type        = string
+  default     = "devops202607"
   description = "GCP project name"
 }
 
@@ -17,7 +18,7 @@ variable "GKE_MACHINE_TYPE" {
 
 variable "GKE_NUM_NODES" {
   type        = number
-  default     = 2
+  default     = 10
   description = "GKE nodes number"
 }
 
