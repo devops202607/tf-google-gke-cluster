@@ -101,7 +101,7 @@ jobs:
         env:
           INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
         run: |
-          infracost comment github \ 
+          infracost comment github \
             --path=infracost-diff.json \
             --repo=${{ github.repository }} \
             --pull-request=${{ steps.pr.outputs.pr-number }} \
