@@ -86,18 +86,24 @@ jobs:
           terraform show -json tfplan.binary > tfplan.json
           infracost breakdown --path tfplan.json --format json --out-file ../infracost-head.json
 
-      - name: Post Infracost Comment
+      - name: Infracost Diff
         if: github.event.action != 'closed'
         env:
           INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           infracost diff --path=infracost-head.json \
                          --compare-to=infracost-base.json \
                          --format=json \
                          --out-file=infracost-diff.json
 
-          infracost comment github --path=infracost-diff.json \
-                                   --repo=${{ github.repository }} \
-                                   --pull-request=${{ steps.pr.outputs.pr-number }} \
-                                   --behavior=update
+      - name: Infracost comment PR
+        if: github.event.action != 'closed'
+        env:
+          INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+        run: |
+          infracost comment github \ 
+            --path=infracost-diff.json \
+            --repo=${{ github.repository }} \
+            --pull-request=${{ steps.pr.outputs.pr-number }} \
+            --github-token=${{ github.token }} \
+            --behavior=update
