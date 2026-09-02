@@ -75,7 +75,7 @@ jobs:
           terraform init -backend=false
           terraform plan -refresh=false -out=tfplan.binary
           terraform show -json tfplan.binary > tfplan.json
-          infracost breakdown --path tfplan.json --out-file ../infracost-base.json
+          infracost breakdown --path tfplan.json --format json --out-file ../infracost-base.json
 
       - name: Generate Infracost JSON for Head
         if: github.event.action != 'closed'
@@ -84,13 +84,26 @@ jobs:
           terraform init -backend=false
           terraform plan -refresh=false -out=tfplan.binary
           terraform show -json tfplan.binary > tfplan.json
-          infracost breakdown --path tfplan.json --out-file ../infracost-head.json
+          infracost breakdown --path tfplan.json --format json --out-file ../infracost-head.json
 
-      - name: Run Infracost Diff
-        uses: infracost/actions/diff@c2e668fda0716ccc96353c6e6438c4a20448821a
-        with:
-          api-key: ${{ secrets.INFRACOST_API_KEY }}
-          base-path: ${{ github.event.action != 'closed' && 'infracost-base.json' || '' }}
-          head-path: ${{ github.event.action != 'closed' && 'infracost-head.json' || '' }}
-          pr-number: ${{ steps.pr.outputs.pr-number }}
+      - name: Infracost Diff
+        if: github.event.action != 'closed'
+        env:
+          INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+        run: |
+          infracost diff --path=infracost-head.json \
+                         --compare-to=infracost-base.json \
+                         --format=json \
+                         --out-file=infracost-diff.json
 
+      - name: Infracost comment PR
+        if: github.event.action != 'closed'
+        env:
+          INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+        run: |
+          infracost comment github \
+            --path=infracost-diff.json \
+            --repo=${{ github.repository }} \
+            --pull-request=${{ steps.pr.outputs.pr-number }} \
+            --github-token=${{ github.token }} \
+            --behavior=update
